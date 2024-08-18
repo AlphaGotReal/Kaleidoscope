@@ -195,9 +195,18 @@ static std::unique_ptr<ast::PrototypeAST> parse_prototype() {
     return nullptr;
   }
 
+  get_next_token(); // eat '('
+
   std::vector<std::string> arg_names;
-  while (get_next_token() == tok_identifier) {
+  while (curr_token == tok_identifier) {
     arg_names.push_back(lexer::identifier_str);
+    get_next_token(); // consume the identifier
+    if (curr_token == ')') break;
+    if (curr_token != ',') {
+      std::cerr << "arguments must be separated by commas" << std::endl;
+      return nullptr;
+    }
+    get_next_token(); // consume the ','
   }
 
   if (curr_token != ')') {
@@ -224,15 +233,10 @@ static std::unique_ptr<ast::FunctionAST> parse_function() {
     return nullptr;
   }
 
-  while (curr_token == '\n') {
-    get_next_token(); // consume all the new line characters
-  }
-
   if (auto body = parse_expression()) {
     return std::make_unique<ast::FunctionAST>(std::move(proto), 
         std::move(body));
   }
-
   return nullptr;
 }
 
@@ -249,7 +253,7 @@ static std::unique_ptr<ast::FunctionAST> parse_top_level_expr() {
 
 static void handle_definition() {
   if (parse_function()) {
-    std::cerr << "Parsed a function definition" << std::endl;
+    // std::cerr << "Parsed a function definition" << std::endl;
   } else {
     get_next_token();
   }
@@ -257,7 +261,7 @@ static void handle_definition() {
 
 static void handle_extern() {
   if (parse_extern()) {
-    std::cerr << "Parsed an extern" << std::endl;
+    // std::cerr << "Parsed an extern" << std::endl;
   } else {
     get_next_token();
   }
@@ -265,7 +269,7 @@ static void handle_extern() {
 
 static void handle_top_level_expr() {
   if (parse_top_level_expr()) {
-    std::cerr << "Parsed a top-level expr" << std::endl;
+    // std::cerr << "Parsed a top-level expr" << std::endl;
   } else {
     get_next_token();
   }

@@ -2,12 +2,25 @@
 #include <memory>
 #include <vector>
 
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
+
 namespace ast {
 
 // base class for the AST
 class ExprAST {
 public:
   virtual ~ExprAST() = default;
+  virtual llvm::Value *codegen() = 0;
 };
 
 /* token node definition */
@@ -17,6 +30,8 @@ class NumberExprAST: public ExprAST {
 public:
   NumberExprAST(double value)
     : value(value) {}
+
+  llvm::Value *codegen() override;
 
 private:
   double value;
@@ -93,6 +108,21 @@ private:
   std::unique_ptr<PrototypeAST> proto;
   std::unique_ptr<ExprAST> body;
 };
+
+};
+
+// define the overriden IR generation code
+
+
+namespace ast {
+
+static std::unique_ptr<llvm::LLVMContext> _context;
+static std::unique_ptr<llvm::Module> _module;
+static std::unique_ptr<llvm::IRBuilder<>> _builder;
+
+llvm::Value *NumberExprAST::codegen() {
+  return llvm::ConstantFP::get()
+}
 
 };
 

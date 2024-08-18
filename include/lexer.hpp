@@ -19,8 +19,8 @@ static double num_value;
 static int get_token(char *file_content, int& ptr) {
 
   // process white space
-  while (file_content[ptr] == ' ') {
-    ++ptr;
+  while (file_content[ptr] == ' ' || file_content[ptr] == '\n') {
+    ++ptr; // consume all white and new line characters
   }
 
   // comment
