@@ -42,31 +42,6 @@ int start(int argc, char **argv) {
   parser::binary_op_precedence['+'] = 30;
   parser::binary_op_precedence['*'] = 40;
 
-  ast::initialise_module();
-
-  parser::get_next_token();
-  while (ptr < char_len) {
-    switch(parser::curr_token) {
-      case tok_eof:
-        break;
-      case ';':
-        parser::get_next_token();
-        break;
-      case '\n':
-        parser::get_next_token();
-        break;
-      case tok_def:
-        parser::handle_definition();
-        break;
-      case tok_extern:
-        parser::handle_extern();
-        break;
-      default: 
-        parser::handle_top_level_expr();
-        break;
-    }
-  }  
-
   return 0;
 }
 

@@ -2,26 +2,12 @@
 #include <memory>
 #include <vector>
 
-#include "llvm/IR/Value.h"
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/Verifier.h"
-
 namespace ast {
 
 // base class for the AST
 class ExprAST {
 public:
   virtual ~ExprAST() = default;
-  virtual llvm::Value *codegen() = 0;
 };
 
 /* token node definition */
@@ -32,8 +18,6 @@ public:
   NumberExprAST(double value)
     : value(value) {}
 
-  llvm::Value *codegen() override;
-
 private:
   double value;
 };
@@ -43,8 +27,6 @@ class VariableExprAST: public ExprAST {
 public:
   VariableExprAST(const std::string& name)
     : name(name) {}
-
-  llvm::Value *codegen() override;
 
 private:
   std::string name;
@@ -62,8 +44,6 @@ public:
       lhs(std::move(lhs)), 
       rhs(std::move(rhs)) {}
 
-  llvm::Value *codegen() override;
-
 private:
   char operation;
   std::unique_ptr<ExprAST> lhs, rhs;
@@ -76,8 +56,6 @@ public:
       std::vector<std::unique_ptr<ExprAST>> args)
     : callee(callee), 
       args(std::move(args)) {}
-
-  llvm::Value *codegen() override;
 
 private:
   std::string callee;
@@ -98,8 +76,6 @@ public:
     return this->name;
   }
 
-  llvm::Function *codegen();
-
 private:
   std::string name;
   std::vector<std::string> args;
@@ -113,18 +89,10 @@ public:
     : proto(std::move(proto)), 
       body(std::move(body)) {}
 
-  llvm::Function *codegen();
-
 private:
   std::unique_ptr<PrototypeAST> proto;
   std::unique_ptr<ExprAST> body;
 };
 
 };
-
-// override IR code generation 
-
-namespace ast {
-
-}
 
