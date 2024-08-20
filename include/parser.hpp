@@ -93,7 +93,7 @@ static std::unique_ptr<ast::ExprAST> parse_identifier_expr() {
       identifier_name, std::move(args));
 }
 
-// merge the upper functions
+// merge the previously defined functions
 // now this method is capable to handling the following
 // primary := identifier_expr
 // primary := function(args..)
@@ -252,24 +252,30 @@ static std::unique_ptr<ast::FunctionAST> parse_top_level_expr() {
 }
 
 static void handle_definition() {
-  if (parse_function()) {
-    // std::cerr << "Parsed a function definition" << std::endl;
+  if (auto root = parse_function()) {
+    if (auto *ir_code = root->codegen()) {
+
+    }
   } else {
     get_next_token();
   }
 }
 
 static void handle_extern() {
-  if (parse_extern()) {
-    // std::cerr << "Parsed an extern" << std::endl;
+  if (auto root = parse_extern()) {
+    if (auto *ir_code = root->codegen()) {
+
+    }
   } else {
     get_next_token();
   }
 }
 
 static void handle_top_level_expr() {
-  if (parse_top_level_expr()) {
-    // std::cerr << "Parsed a top-level expr" << std::endl;
+  if (auto root = parse_top_level_expr()) {
+    if (auto *ir_code = root->codegen()) {
+
+    }
   } else {
     get_next_token();
   }

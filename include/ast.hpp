@@ -42,6 +42,8 @@ class VariableExprAST: public ExprAST {
 public:
   VariableExprAST(const std::string& name)
     : name(name) {}
+  
+  llvm::Value *codegen() override;
 
 private:
   std::string name;
@@ -59,6 +61,8 @@ public:
       lhs(std::move(lhs)), 
       rhs(std::move(rhs)) {}
 
+  llvm::Value *codegen() override;
+
 private:
   char operation;
   std::unique_ptr<ExprAST> lhs, rhs;
@@ -71,6 +75,8 @@ public:
       std::vector<std::unique_ptr<ExprAST>> args)
     : callee(callee), 
       args(std::move(args)) {}
+
+  llvm::Value *codegen() override;
 
 private:
   std::string callee;
@@ -91,6 +97,8 @@ public:
     return this->name;
   }
 
+  llvm::Function *codegen();
+
 private:
   std::string name;
   std::vector<std::string> args;
@@ -104,6 +112,8 @@ public:
     : proto(std::move(proto)), 
       body(std::move(body)) {}
 
+  llvm::Function *codegen();
+
 private:
   std::unique_ptr<PrototypeAST> proto;
   std::unique_ptr<ExprAST> body;
@@ -113,15 +123,137 @@ private:
 
 // define the overriden IR generation code
 
-
 namespace ast {
 
 static std::unique_ptr<llvm::LLVMContext> _context;
 static std::unique_ptr<llvm::Module> _module;
 static std::unique_ptr<llvm::IRBuilder<>> _builder;
+static std::unordered_map<std::string, llvm::Value *> named_values;
+
+static void init_ir() {
+  _context = std::make_unique<llvm::LLVMContext>();
+  _module = std::make_unique<llvm::Module>("module", *_context);
+  _builder = std::make_unique<llvm::IRBuilder<>>(*_context);
+}
 
 llvm::Value *NumberExprAST::codegen() {
-  return llvm::ConstantFP::get()
+  return llvm::ConstantFP::get(*_context, llvm::APFloat(this->value));
+}
+
+llvm::Value *VariableExprAST::codegen() {
+  llvm::Value *_value = named_values[this->name];   
+  if (!_value) {
+    std::cerr << "name '" << this->name << "' is not defined" << std::endl;
+  }return _value;
+}
+
+llvm::Value *BinaryExprAST::codegen() {
+  llvm::Value *_right = this->rhs->codegen();
+  llvm::Value *_left = this->lhs->codegen();
+
+  if (!_right||!_left) {
+    return nullptr;
+  }
+
+  switch(this->operation) {
+    case '*':
+      return _builder->CreateFMul(_left, _right, "multmp");
+    case '+':
+      return _builder->CreateFAdd(_left, _right, "addtmp");
+    case '-':
+      return _builder->CreateFSub(_left, _right, "subtmp");
+    case '<':
+      _left = _builder->CreateFCmpULT(_left, _right, "cmptmp");
+      return _builder->CreateUIToFP(_left, 
+          llvm::Type::getDoubleTy(*_context),
+          "booltmp");
+    default:
+      std::cerr << "operation '" << this->operation << "' not recognised" << std::endl;
+      return nullptr;
+  }
+
+}
+
+llvm::Value *CallExprAST::codegen() {
+ 
+  // first finding the function definition in the code somewhere.
+  llvm::Function *function_call = _module->getFunction(this->callee);
+ 
+  // checking for validity of the function arguments
+  if (function_call->arg_size() != this->args.size()) {
+    std::cerr << "number of arguments don't match" << std::endl;
+    return nullptr;
+  }
+
+  std::vector<llvm::Value *> arg_code;
+  for (unsigned i = 0; i < this->args.size(); ++i) {
+    arg_code.push_back(this->args[i]->codegen());
+    if (!arg_code.back()) {
+      std::cerr << "invalid argument '" << arg_code.back() << "'" << std::endl;
+      return nullptr;
+    }
+  }
+
+  return _builder->CreateCall(function_call, arg_code, "calltmp");
+}
+
+llvm::Function *PrototypeAST::codegen() {
+
+  // defining the argument types --> <function_return_type>(double, double.....);
+  std::vector<llvm::Type *> arg_types(this->args.size(), 
+      llvm::Type::getDoubleTy(*_context)); 
+
+  // defining the fucntion return type --> double for this language
+  llvm::FunctionType *_function_type = llvm::FunctionType::get(
+      llvm::Type::getDoubleTy(*_context), 
+      arg_types, false); // isVarArgs=false
+
+  llvm::Function *_function = llvm::Function::Create(
+      _function_type, llvm::Function::ExternalLinkage, this->name,
+      _module.get());
+
+  // setting names to all the function args
+  // this is unnecessay, the IRBuilder automatically sets default names to the args
+  uint8_t t = 0;
+  for (auto& arg: _function->args()) {
+    arg.setName(this->args[t++]);
+  }
+
+  return _function;
+}
+
+llvm::Function *FunctionAST::codegen() {
+
+  // checking for previously defined prototype by the 'extern' keyword
+  llvm::Function *_function = _module->getFunction(this->proto->get_name());
+  if (!_function) {
+    // if the function prototype was never defined then get the defintion directly
+    _function = this->proto->codegen();
+  }
+
+  if (!_function) {
+    std::cerr << "syntax error in the definition of the function prototype" << std::endl;
+    return nullptr;
+  }
+
+  llvm::BasicBlock *_basic_block = llvm::BasicBlock::Create(*_context, 
+      "entrypoint", _function);
+  _builder->SetInsertPoint(_basic_block);
+
+  // named_values.clear(); // clearning the named_values to store named values of a different scope
+  for (auto& arg: _function->args()) {
+    named_values[std::string(arg.getName())] = &arg;
+  }
+
+  if (llvm::Value *return_value = this->body->codegen()) {
+    _builder->CreateRet(return_value);
+    llvm::verifyFunction(*_function);
+    return _function;
+  }
+
+  // a function with no return type will raise an error
+  _function->eraseFromParent(); 
+  return nullptr;
 }
 
 };
