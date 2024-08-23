@@ -4,7 +4,10 @@ enum Token {
   tok_def = -2,
   tok_extern = -3,
   tok_identifier = -4,
-  tok_number = -5
+  tok_number = -5,
+  tok_if = -6,
+  tok_then = -7,
+  tok_else = -8
 };
 
 namespace lexer {
@@ -52,6 +55,12 @@ static int get_token(char *file_content, int& ptr) {
       return tok_def;
     }else if (identifier_str == "extern") {
       return tok_extern;
+    }else if (identifier_str == "if") {
+      return tok_if;
+    }else if (identifier_str == "then") {
+      return tok_then;
+    }else if (identifier_str == "else") {
+      return tok_else;
     }
 
     return tok_identifier;

@@ -1,4 +1,7 @@
-def fun(a, b)
-  a * b + a
+def foo(x)
+  x + 1
 
-fun(4, 5)
+def foo(x)
+  x + 2
+
+foo(3)

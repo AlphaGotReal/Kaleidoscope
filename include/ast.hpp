@@ -49,6 +49,19 @@ private:
   std::string name;
 };
 
+class IfExprAST: public ExprAST {
+public:
+  IfExprAST(std::unique_ptr<ExprAST> cond, 
+      std::unique_ptr<ExprAST> then,
+      std::unique_ptr<ExprAST> else_) 
+    : cond(cond), then(then), else_(else_) {}
+
+  llvm::Value *codegen() override;
+
+private:
+  std::unique_ptr<ExprAST> cond, then, else_;
+};
+
 /* expressions start here */
 
 // binary expressions node
@@ -145,6 +158,10 @@ llvm::Value *VariableExprAST::codegen() {
   if (!_value) {
     std::cerr << "name '" << this->name << "' is not defined" << std::endl;
   }return _value;
+}
+
+llvm::Value *IfExprAST::codegen() {
+  return nullptr;
 }
 
 llvm::Value *BinaryExprAST::codegen() {

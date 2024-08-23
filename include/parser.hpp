@@ -251,6 +251,40 @@ static std::unique_ptr<ast::FunctionAST> parse_top_level_expr() {
   return nullptr;
 }
 
+// if condition
+static std::unique_ptr<ast::IfExprAST> parse_if_expr() {
+  get_next_token(); // eat the 'if'
+  auto cond = parse_expression();
+  if (!cond) {
+    return nullptr;
+  }
+
+  if (curr_token != tok_then) {
+    std::cerr << "syntax error: no following 'then' after the 'if'" << std::endl;
+    return nullptr;
+  }
+
+  get_next_token(); // eat the 'then'
+  auto then = parse_expression();
+  if (!then) {
+    return nullptr;
+  }
+
+  if (curr_token != tok_else) {
+    std::cerr << "syntax error: no following 'else' after the 'if'" << std::endl;
+    return nullptr;
+  }
+
+  get_next_token(); // eat the 'else'
+  auto else_ = parse_expression();
+  if (!else_) {
+    return nullptr;
+  }
+
+  return std::make_unique<ast::IfExprAST>(std::move(cond),
+      std::move(then), std::move(else_));
+}
+
 static void handle_definition() {
   if (auto root = parse_function()) {
     if (auto *ir_code = root->codegen()) {
